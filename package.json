@@ -25,8 +25,7 @@
           "type": "object",
           "default": {
             "w": "w-[$1px]",
-            "h": "h-[$1px]",
-            "r": "rounded-[$1px]"
+            "h": "h-[$1px]"
           },
           "description": "自定义转换规则"
         }
