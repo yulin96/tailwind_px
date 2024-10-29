@@ -1,7 +1,7 @@
 {
-  "name": "pixelifytailwind",
-  "displayName": "PixelifyTailwind",
-  "description": "",
+  "name": "tailwind_px",
+  "displayName": "TailwindPxConverter",
+  "description": "自动将w100转换为w-[100px]",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.94.0"
@@ -9,15 +9,29 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:vue",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescriptreact"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
-    "commands": [
-      {
-        "command": "pixelifytailwind.helloWorld",
-        "title": "Hello World"
+    "commands": [],
+    "configuration": {
+      "type": "object",
+      "title": "TailwindPxConverter Configuration",
+      "properties": {
+        "TailwindPxConverter.rules": {
+          "type": "object",
+          "default": {
+            "w": "w-[$1px]",
+            "h": "h-[$1px]",
+            "r": "rounded-[$1px]"
+          },
+          "description": "自定义转换规则"
+        }
       }
-    ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",

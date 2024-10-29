@@ -1,26 +1,54 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+import * as vscode from 'vscode'
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+let isConversionEnabled = true // 默认开启转换
+
 export function activate(context: vscode.ExtensionContext) {
+  console.log('Congratulations, your extension "TailwindPxConverter" is now active!')
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "pixelifytailwind" is now active!');
+  // 创建状态栏按钮
+  const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0)
+  statusBarItem.command = 'TailwindPxConverter.toggleConversion'
+  context.subscriptions.push(statusBarItem)
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('pixelifytailwind.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from PixelifyTailwind!');
-	});
+  // 更新状态栏按钮文本
+  const updateStatusBarItem = () => {
+    statusBarItem.text = isConversionEnabled ? '转换：✅' : '转换：🛑'
+    statusBarItem.show()
+  }
 
-	context.subscriptions.push(disposable);
+  // 注册切换转换命令
+  const toggleConversionCommand = vscode.commands.registerCommand('TailwindPxConverter.toggleConversion', () => {
+    isConversionEnabled = !isConversionEnabled
+    updateStatusBarItem()
+  })
+  context.subscriptions.push(toggleConversionCommand)
+
+  // 初始化状态栏按钮
+  updateStatusBarItem()
+
+  vscode.workspace.onWillSaveTextDocument(async (event) => {
+    if (isConversionEnabled && event.reason === vscode.TextDocumentSaveReason.Manual) {
+      const document = event.document
+      const supportedLanguages = ['vue', 'javascriptreact', 'typescriptreact']
+      if (supportedLanguages.includes(document.languageId)) {
+        const config = vscode.workspace.getConfiguration('TailwindPxConverter')
+        const rules = config.get<{ [key: string]: string }>('rules', {})
+
+        let text = document.getText()
+        for (const [key, value] of Object.entries(rules)) {
+          const regex = new RegExp(`(class|:class)="([^"]*\\b${key}(\\d+)\\b[^"]*)"`, 'g')
+          text = text.replace(regex, (match, p1, p2) => {
+            return `${p1}="${p2.replace(new RegExp(`\\b${key}(\\d+)\\b`, 'g'), value)}"`
+          })
+        }
+
+        const edit = new vscode.WorkspaceEdit()
+        const fullRange = new vscode.Range(document.positionAt(0), document.positionAt(text.length))
+        edit.replace(document.uri, fullRange, text)
+        await vscode.workspace.applyEdit(edit)
+      }
+    }
+  })
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}
