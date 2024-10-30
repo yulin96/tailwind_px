@@ -12,7 +12,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // 更新状态栏按钮文本
   const updateStatusBarItem = () => {
-    statusBarItem.text = isConversionEnabled ? '转换：✅' : '转换：🛑'
+    statusBarItem.text = isConversionEnabled ? '转换：✓' : '转换：✕'
     statusBarItem.show()
   }
 
@@ -66,7 +66,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (edits.length > 0) {
           const workspaceEdit = new vscode.WorkspaceEdit()
           workspaceEdit.set(document.uri, edits)
-          await vscode.workspace.applyEdit(workspaceEdit)
+          event.waitUntil(Promise.resolve(workspaceEdit))
         }
       }
     }
