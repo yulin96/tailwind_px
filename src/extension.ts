@@ -38,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
   // 初始化状态栏按钮
   updateStatusBarItem()
 
-  const saveEventDisposable = vscode.workspace.onWillSaveTextDocument(async (event) => {
+  const saveEventDisposable = vscode.workspace.onDidChangeTextDocument(async (event) => {
     const editor = vscode.window.activeTextEditor
     if (!editor) {
       return
@@ -47,7 +47,7 @@ export function activate(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('TailwindPxConverter')
     const isConversionEnabled = config.get<boolean>('enabled', true)
 
-    if (isConversionEnabled && event.reason === vscode.TextDocumentSaveReason.Manual) {
+    if (isConversionEnabled) {
       const document = event.document
       const supportedLanguages = ['vue', 'javascriptreact', 'typescriptreact']
 
