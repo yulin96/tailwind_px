@@ -26,29 +26,48 @@ export function activate(context: vscode.ExtensionContext) {
   // 初始化状态栏按钮
   updateStatusBarItem()
 
-  vscode.workspace.onWillSaveTextDocument(async (event) => {
+  const saveEventDisposable = vscode.workspace.onWillSaveTextDocument(async (event) => {
     if (isConversionEnabled && event.reason === vscode.TextDocumentSaveReason.Manual) {
       const document = event.document
+      const editor = vscode.window.activeTextEditor
       const supportedLanguages = ['vue', 'javascriptreact', 'typescriptreact']
-      if (supportedLanguages.includes(document.languageId)) {
+
+      if (editor && supportedLanguages.includes(document.languageId)) {
         const config = vscode.workspace.getConfiguration('TailwindPxConverter')
         const rules = config.get<{ [key: string]: string }>('rules', {})
 
-        let text = document.getText()
+        const text = document.getText()
+        const edits: vscode.TextEdit[] = []
+
         for (const [key, value] of Object.entries(rules)) {
-          const regex = new RegExp(`(class|:class)="([^"]*\\b${key}(\\d+)\\b[^"]*)"`, 'g')
-          text = text.replace(regex, (match, p1, p2) => {
-            return `${p1}="${p2.replace(new RegExp(`\\b${key}(\\d+)\\b`, 'g'), value)}"`
-          })
+          const regex = new RegExp(`(class|:class)="[^"]*\\b${key}\\d+\\b[^"]*"`, 'g')
+          let match: RegExpExecArray | null
+
+          while ((match = regex.exec(text))) {
+            const matchText = match[0]
+            const newText = matchText.replace(
+              new RegExp(`\\b${key}(\\d+)\\b`, 'g'),
+              (m, p1) => `${value.replace('*', p1)}`
+            )
+
+            if (newText !== matchText) {
+              const startPos = document.positionAt(match.index)
+              const endPos = document.positionAt(match.index + matchText.length)
+              const range = new vscode.Range(startPos, endPos)
+              edits.push(vscode.TextEdit.replace(range, newText))
+            }
+          }
         }
 
-        const edit = new vscode.WorkspaceEdit()
-        const fullRange = new vscode.Range(document.positionAt(0), document.positionAt(text.length))
-        edit.replace(document.uri, fullRange, text)
-        await vscode.workspace.applyEdit(edit)
+        if (edits.length > 0) {
+          const workspaceEdit = new vscode.WorkspaceEdit()
+          workspaceEdit.set(document.uri, edits)
+          await vscode.workspace.applyEdit(workspaceEdit)
+        }
       }
     }
   })
+  context.subscriptions.push(saveEventDisposable)
 }
 
 export function deactivate() {}
