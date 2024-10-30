@@ -40,7 +40,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   const saveEventDisposable = vscode.workspace.onWillSaveTextDocument(async (event) => {
     const editor = vscode.window.activeTextEditor
-    // 如果没有活动的编辑器，跳过处理
     if (!editor) {
       return
     }
@@ -54,7 +53,6 @@ export function activate(context: vscode.ExtensionContext) {
 
       if (supportedLanguages.includes(document.languageId)) {
         const rules = config.get<{ [key: string]: string }>('rules', {})
-
         const text = document.getText()
         const edits: vscode.TextEdit[] = []
 
@@ -64,8 +62,6 @@ export function activate(context: vscode.ExtensionContext) {
         while ((classAttrMatch = classAttributeRegex.exec(text))) {
           const fullMatch = classAttrMatch[0]
           const classContent = classAttrMatch[1]
-          console.log(`a${classContent}a`)
-
           let newClassContent = classContent
 
           for (const [key, value] of Object.entries(rules)) {
@@ -81,15 +77,17 @@ export function activate(context: vscode.ExtensionContext) {
           }
         }
 
-        // 如果有编辑，应用更改
         if (edits.length > 0) {
-          const workspaceEdit = new vscode.WorkspaceEdit()
-          workspaceEdit.set(document.uri, edits)
-          event.waitUntil(vscode.workspace.applyEdit(workspaceEdit))
+          setTimeout(async () => {
+            const workspaceEdit = new vscode.WorkspaceEdit()
+            workspaceEdit.set(document.uri, edits)
+            await vscode.workspace.applyEdit(workspaceEdit)
+          }, 100)
         }
       }
     }
   })
+
   context.subscriptions.push(saveEventDisposable)
 }
 
