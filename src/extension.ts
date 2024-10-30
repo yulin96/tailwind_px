@@ -38,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
   // 初始化状态栏按钮
   updateStatusBarItem()
 
-  const saveEventDisposable = vscode.workspace.onDidChangeTextDocument(async (event) => {
+  const saveEventDisposable = vscode.workspace.onDidSaveTextDocument(async (event) => {
     const editor = vscode.window.activeTextEditor
     if (!editor) {
       return
@@ -48,12 +48,11 @@ export function activate(context: vscode.ExtensionContext) {
     const isConversionEnabled = config.get<boolean>('enabled', true)
 
     if (isConversionEnabled) {
-      const document = event.document
       const supportedLanguages = ['vue', 'javascriptreact', 'typescriptreact']
 
-      if (supportedLanguages.includes(document.languageId)) {
+      if (supportedLanguages.includes(event.languageId)) {
         const rules = config.get<{ [key: string]: string }>('rules', {})
-        const text = document.getText()
+        const text = event.getText()
         const edits: vscode.TextEdit[] = []
 
         const classAttributeRegex = /(?:class|:class)="([^"]*)"/g
@@ -70,8 +69,8 @@ export function activate(context: vscode.ExtensionContext) {
           }
 
           if (newClassContent !== classContent) {
-            const startPos = document.positionAt(classAttrMatch.index)
-            const endPos = document.positionAt(classAttrMatch.index + fullMatch.length)
+            const startPos = event.positionAt(classAttrMatch.index)
+            const endPos = event.positionAt(classAttrMatch.index + fullMatch.length)
             const newFullMatch = fullMatch.replace(classContent, newClassContent)
             edits.push(vscode.TextEdit.replace(new vscode.Range(startPos, endPos), newFullMatch))
           }
@@ -80,7 +79,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (edits.length > 0) {
           setTimeout(async () => {
             const workspaceEdit = new vscode.WorkspaceEdit()
-            workspaceEdit.set(document.uri, edits)
+            workspaceEdit.set(event.uri, edits)
             await vscode.workspace.applyEdit(workspaceEdit)
           }, 100)
         }
