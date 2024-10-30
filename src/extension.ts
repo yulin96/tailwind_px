@@ -39,26 +39,30 @@ export function activate(context: vscode.ExtensionContext) {
         const text = document.getText()
         const edits: vscode.TextEdit[] = []
 
-        for (const [key, value] of Object.entries(rules)) {
-          const regex = new RegExp(`(class|:class)="[^"]*\\b${key}\\d+\\b[^"]*"`, 'g')
-          let match: RegExpExecArray | null
+        const classAttributeRegex = /(?:class|:class)="([^"]*)"/g
+        let classAttrMatch: RegExpExecArray | null
 
-          while ((match = regex.exec(text))) {
-            const matchText = match[0]
-            const newText = matchText.replace(
-              new RegExp(`\\b${key}(\\d+)\\b`, 'g'),
-              (m, p1) => `${value.replace('*', p1)}`
-            )
+        while ((classAttrMatch = classAttributeRegex.exec(text))) {
+          const fullMatch = classAttrMatch[0]
+          const classContent = classAttrMatch[1]
+          console.log(`a${classContent}a`)
 
-            if (newText !== matchText) {
-              const startPos = document.positionAt(match.index)
-              const endPos = document.positionAt(match.index + matchText.length)
-              const range = new vscode.Range(startPos, endPos)
-              edits.push(vscode.TextEdit.replace(range, newText))
-            }
+          let newClassContent = classContent
+
+          for (const [key, value] of Object.entries(rules)) {
+            const classNameRegex = new RegExp(`(\\s|^)${key}(\\d+)(?=\\s|$)`, 'g')
+            newClassContent = newClassContent.replace(classNameRegex, (m, p1, p2) => `${p1}${value.replace('$1', p2)}`)
+          }
+
+          if (newClassContent !== classContent) {
+            const startPos = document.positionAt(classAttrMatch.index)
+            const endPos = document.positionAt(classAttrMatch.index + fullMatch.length)
+            const newFullMatch = fullMatch.replace(classContent, newClassContent)
+            edits.push(vscode.TextEdit.replace(new vscode.Range(startPos, endPos), newFullMatch))
           }
         }
 
+        // 如果有编辑，应用更改
         if (edits.length > 0) {
           const workspaceEdit = new vscode.WorkspaceEdit()
           workspaceEdit.set(document.uri, edits)
