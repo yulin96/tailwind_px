@@ -21,11 +21,21 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
-    "commands": [],
+    "commands": [
+      {
+        "command": "TailwindPxConverter.toggleConversion",
+        "title": "切换 TailwindPxConverter 转换"
+      }
+    ],
     "configuration": {
       "type": "object",
       "title": "TailwindPxConverter Configuration",
       "properties": {
+        "TailwindPxConverter.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否启用 TailwindPxConverter 转换功能"
+        },
         "TailwindPxConverter.rules": {
           "type": "object",
           "default": {

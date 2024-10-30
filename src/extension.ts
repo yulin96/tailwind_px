@@ -1,7 +1,5 @@
 import * as vscode from 'vscode'
 
-let isConversionEnabled = true // 默认开启转换
-
 export function activate(context: vscode.ExtensionContext) {
   console.log('Congratulations, your extension "TailwindPxConverter" is now active!')
 
@@ -12,14 +10,28 @@ export function activate(context: vscode.ExtensionContext) {
 
   // 更新状态栏按钮文本
   const updateStatusBarItem = () => {
+    const config = vscode.workspace.getConfiguration('TailwindPxConverter')
+    const isConversionEnabled = config.get<boolean>('enabled', true)
     statusBarItem.text = isConversionEnabled ? '转换：✓' : '转换：✕'
     statusBarItem.show()
   }
 
-  // 注册切换转换命令
-  const toggleConversionCommand = vscode.commands.registerCommand('TailwindPxConverter.toggleConversion', () => {
-    isConversionEnabled = !isConversionEnabled
-    updateStatusBarItem()
+  // 监听配置变化
+  const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
+    if (
+      event.affectsConfiguration('TailwindPxConverter.enabled') ||
+      event.affectsConfiguration('TailwindPxConverter.rules')
+    ) {
+      updateStatusBarItem()
+    }
+  })
+  context.subscriptions.push(configChangeDisposable)
+
+  // 注册切换转换命令，更新配置
+  const toggleConversionCommand = vscode.commands.registerCommand('TailwindPxConverter.toggleConversion', async () => {
+    const config = vscode.workspace.getConfiguration('TailwindPxConverter')
+    const current = config.get<boolean>('enabled', true)
+    await config.update('enabled', !current, vscode.ConfigurationTarget.Global)
   })
   context.subscriptions.push(toggleConversionCommand)
 
@@ -27,13 +39,15 @@ export function activate(context: vscode.ExtensionContext) {
   updateStatusBarItem()
 
   const saveEventDisposable = vscode.workspace.onWillSaveTextDocument(async (event) => {
+    const config = vscode.workspace.getConfiguration('TailwindPxConverter')
+    const isConversionEnabled = config.get<boolean>('enabled', true)
+
     if (isConversionEnabled && event.reason === vscode.TextDocumentSaveReason.Manual) {
       const document = event.document
       const editor = vscode.window.activeTextEditor
       const supportedLanguages = ['vue', 'javascriptreact', 'typescriptreact']
 
       if (editor && supportedLanguages.includes(document.languageId)) {
-        const config = vscode.workspace.getConfiguration('TailwindPxConverter')
         const rules = config.get<{ [key: string]: string }>('rules', {})
 
         const text = document.getText()
@@ -66,7 +80,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (edits.length > 0) {
           const workspaceEdit = new vscode.WorkspaceEdit()
           workspaceEdit.set(document.uri, edits)
-          event.waitUntil(Promise.resolve(workspaceEdit))
+          event.waitUntil(vscode.workspace.applyEdit(workspaceEdit))
         }
       }
     }
