@@ -42,16 +42,18 @@ export function activate(context: vscode.ExtensionContext) {
   })
   context.subscriptions.push(toggleConversionCommand)
 
-  // 初始化状态栏按钮
   updateStatusBarItem()
 
-  // 缓存支持的语言和正则表达式
   const supportedLanguages = ['vue', 'javascriptreact', 'typescriptreact']
   const classAttributeRegex = /(?:class|:class)="([^"]*)"/g
 
-  const saveEventDisposable = vscode.workspace.onDidSaveTextDocument(async (event) => {
-    if (isConversionEnabled && supportedLanguages.includes(event.languageId)) {
-      const text = event.getText()
+  const saveEventDisposable = vscode.workspace.onWillSaveTextDocument((event) => {
+    if (
+      isConversionEnabled &&
+      supportedLanguages.includes(event.document.languageId) &&
+      event.reason === vscode.TextDocumentSaveReason.Manual
+    ) {
+      const text = event.document.getText()
       const edits: vscode.TextEdit[] = []
 
       let classAttrMatch: RegExpExecArray | null
@@ -67,18 +69,15 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         if (newClassContent !== classContent) {
-          const startPos = event.positionAt(classAttrMatch.index)
-          const endPos = event.positionAt(classAttrMatch.index + fullMatch.length)
+          const startPos = event.document.positionAt(classAttrMatch.index)
+          const endPos = event.document.positionAt(classAttrMatch.index + fullMatch.length)
           const newFullMatch = fullMatch.replace(classContent, newClassContent)
           edits.push(vscode.TextEdit.replace(new vscode.Range(startPos, endPos), newFullMatch))
         }
       }
 
       if (edits.length > 0) {
-        const workspaceEdit = new vscode.WorkspaceEdit()
-        workspaceEdit.set(event.uri, edits)
-        await vscode.workspace.applyEdit(workspaceEdit)
-        await event.save() // 保存文件
+        event.waitUntil(Promise.resolve(edits))
       }
     }
   })
