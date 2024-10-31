@@ -8,10 +8,14 @@ export function activate(context: vscode.ExtensionContext) {
   statusBarItem.command = 'TailwindPxConverter.toggleConversion'
   context.subscriptions.push(statusBarItem)
 
+  // 缓存配置和状态
+  let config = vscode.workspace.getConfiguration('TailwindPxConverter')
+  let isConversionEnabled = config.get<boolean>('enabled', true)
+  let rules = config.get<{ [key: string]: string }>('rules', {})
+
   // 更新状态栏按钮文本
   const updateStatusBarItem = () => {
-    const config = vscode.workspace.getConfiguration('TailwindPxConverter')
-    const isConversionEnabled = config.get<boolean>('enabled', true)
+    isConversionEnabled = config.get<boolean>('enabled', true)
     statusBarItem.text = isConversionEnabled ? '转换：✓' : '转换：✕'
     statusBarItem.show()
   }
@@ -22,6 +26,9 @@ export function activate(context: vscode.ExtensionContext) {
       event.affectsConfiguration('TailwindPxConverter.enabled') ||
       event.affectsConfiguration('TailwindPxConverter.rules')
     ) {
+      config = vscode.workspace.getConfiguration('TailwindPxConverter')
+      isConversionEnabled = config.get<boolean>('enabled', true)
+      rules = config.get<{ [key: string]: string }>('rules', {})
       updateStatusBarItem()
     }
   })
@@ -38,21 +45,12 @@ export function activate(context: vscode.ExtensionContext) {
   // 初始化状态栏按钮
   updateStatusBarItem()
 
-  // 缓存配置和正则表达式
-  const config = vscode.workspace.getConfiguration('TailwindPxConverter')
+  // 缓存支持的语言和正则表达式
   const supportedLanguages = ['vue', 'javascriptreact', 'typescriptreact']
   const classAttributeRegex = /(?:class|:class)="([^"]*)"/g
 
   const saveEventDisposable = vscode.workspace.onDidSaveTextDocument(async (event) => {
-    const editor = vscode.window.activeTextEditor
-    if (!editor) {
-      return
-    }
-
-    const isConversionEnabled = config.get<boolean>('enabled', true)
-
     if (isConversionEnabled && supportedLanguages.includes(event.languageId)) {
-      const rules = config.get<{ [key: string]: string }>('rules', {})
       const text = event.getText()
       const edits: vscode.TextEdit[] = []
 
@@ -77,12 +75,10 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       if (edits.length > 0) {
-        setTimeout(async () => {
-          const workspaceEdit = new vscode.WorkspaceEdit()
-          workspaceEdit.set(event.uri, edits)
-          await vscode.workspace.applyEdit(workspaceEdit)
-          await vscode.workspace.save(event.uri) // 保存文件
-        }, 100)
+        const workspaceEdit = new vscode.WorkspaceEdit()
+        workspaceEdit.set(event.uri, edits)
+        await vscode.workspace.applyEdit(workspaceEdit)
+        await event.save() // 保存文件
       }
     }
   })
