@@ -2,7 +2,7 @@
   "name": "tailwindpx",
   "displayName": "TailwindPxConverter",
   "description": "自动将w100转换为w-[100px]",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "publisher": "yulin96",
   "repository": {
     "type": "git",
