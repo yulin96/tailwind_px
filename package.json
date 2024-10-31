@@ -1,7 +1,7 @@
 {
   "name": "tailwindpx",
   "displayName": "TailwindPxConverter",
-  "description": "自动将w100转换为w-\\[100px\\]",
+  "description": "自动将w100转换为w-[100px]",
   "version": "0.0.10",
   "publisher": "yulin96",
   "repository": {
